@@ -1,0 +1,112 @@
+// Prisma schema for One Homes AI Lead Concierge
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Lead {
+  id            String         @id @default(cuid())
+  salesforceId  String?        @unique
+  firstName     String?
+  lastName      String?
+  email         String?
+  phone         String? // E.164
+  enquiryType   String? // e.g. "2-bed Marylebone", from SF
+  propertyRef   String?
+  source        String?
+  status        LeadStatus     @default(NEW)
+  optedOut      Boolean        @default(false)
+  qualification Json? // budget, beds, location, timeline, buyerType, financing, viewingInterest
+  lastInboundAt DateTime?
+  conversations Conversation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([phone])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel   Channel   @default(WHATSAPP)
+  messages  Message[]
+  handoff   Boolean   @default(false) // true once a human takes over
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([leadId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           Role // LEAD | AI | HUMAN | SYSTEM
+  body           String
+  meta           Json? // provider ids, template used, tool calls
+  // Used for webhook idempotency (e.g. Twilio MessageSid)
+  providerId     String?      @unique
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// Stores property facts so the AI never invents details.
+model Property {
+  id          String   @id @default(cuid())
+  propertyRef String   @unique
+  title       String?
+  area        String?
+  price       String?
+  bedrooms    Int?
+  bathrooms   Int?
+  sizeSqft    Int?
+  description String?
+  status      String? // available, under offer, let, sold
+  factsJson   Json? // arbitrary additional facts
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Idempotency ledger for inbound webhooks (Salesforce, etc.)
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  source     String // "salesforce" | "twilio"
+  externalId String
+  createdAt  DateTime @default(now())
+
+  @@unique([source, externalId])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}
