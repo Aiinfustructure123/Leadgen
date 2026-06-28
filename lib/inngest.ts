@@ -16,11 +16,11 @@ import { sendFreeform, sendTemplate } from "@/lib/whatsapp";
 export const inngest = new Inngest({
   id: "one-homes-ai-lead-concierge",
   eventKey: process.env.INNGEST_EVENT_KEY,
+  signingKey: process.env.INNGEST_SIGNING_KEY,
 });
 
 export const onLeadCreated = inngest.createFunction(
-  { id: "on-lead-created" },
-  { event: "lead/created" },
+  { id: "on-lead-created", triggers: [{ event: "lead/created" }] },
   async ({ event, step }) => {
     const leadId = event.data.leadId as string;
     const lead = await step.run("load lead", () => prisma.lead.findUniqueOrThrow({ where: { id: leadId } }));
@@ -86,9 +86,9 @@ export const onLeadCreated = inngest.createFunction(
 );
 
 export const onMessageReceived = inngest.createFunction(
-  { id: "on-message-received" },
-  { event: "message/received" },
+  { id: "on-message-received", triggers: [{ event: "message/received" }] },
   async ({ event, step }) => {
+    const leadId = event.data.leadId as string;
     const conversationId = event.data.conversationId as string;
 
     if (!isInsideContactHours()) {
@@ -159,10 +159,8 @@ export const onMessageReceived = inngest.createFunction(
 );
 
 export const syncToSalesforce = inngest.createFunction(
-  { id: "sync-to-salesforce" },
-  { event: "salesforce/sync" },
+  { id: "sync-to-salesforce", triggers: [{ event: "salesforce/sync" }] },
   async ({ event, step }) => {
-    const leadId = event.data.leadId as string;
     const conversationId = event.data.conversationId as string;
     const conversation = await step.run("load transcript", () =>
       prisma.conversation.findUniqueOrThrow({

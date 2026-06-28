@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, Show, SignInButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 import "@/app/globals.css";
@@ -23,14 +23,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/dashboard" className="text-slate-700 hover:text-slate-950">
                   Dashboard
                 </Link>
-                <SignedOut>
+                <Show when="signed-out">
                   <SignInButton mode="modal">
                     <button className="rounded-full bg-slate-950 px-4 py-2 text-white">Sign in</button>
                   </SignInButton>
-                </SignedOut>
-                <SignedIn>
+                </Show>
+                <Show when="signed-in">
                   <UserButton />
-                </SignedIn>
+                </Show>
               </div>
             </div>
           </header>

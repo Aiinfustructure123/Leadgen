@@ -134,13 +134,12 @@ export async function mergeQualification(leadId: string, fields: Record<string, 
       ? (lead.qualification as Record<string, unknown>)
       : {};
 
+  const qualification = JSON.parse(JSON.stringify({ ...existing, ...fields })) as Prisma.InputJsonValue;
+
   return prisma.lead.update({
     where: { id: leadId },
     data: {
-      qualification: {
-        ...existing,
-        ...fields,
-      },
+      qualification,
     },
   });
 }
