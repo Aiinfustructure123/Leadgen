@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id             String         @id @default(cuid())
+  salesforceId   String?        @unique
+  firstName      String?
+  lastName       String?
+  email          String?
+  phone          String?
+  enquiryType    String?
+  propertyRef    String?
+  source         String?
+  consentSource  String?
+  status         LeadStatus     @default(NEW)
+  optedOut       Boolean        @default(false)
+  qualification  Json?
+  lastInboundAt  DateTime?
+  conversations  Conversation[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([phone])
+  @@index([email])
+  @@index([status])
+  @@index([updatedAt])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel   Channel   @default(WHATSAPP)
+  messages  Message[]
+  handoff   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([handoff])
+}
+
+model Message {
+  id                String       @id @default(cuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role              Role
+  body              String
+  meta              Json?
+  providerMessageId String?      @unique
+  createdAt         DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  externalId   String
+  payload      Json?
+  processedAt  DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([processedAt])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  ref         String   @unique
+  title       String
+  address     String?
+  area        String?
+  bedrooms    Int?
+  bathrooms   Int?
+  price       String?
+  availability String?
+  facts       Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}

@@ -1,0 +1,57 @@
+{
+  "name": "one-homes-ai-lead-concierge",
+  "version": "1.0.0",
+  "description": "AI lead concierge for One Homes Salesforce enquiries.",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "postinstall": "prisma generate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aiinfustructure123/Leadgen.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/Aiinfustructure123/Leadgen/issues"
+  },
+  "homepage": "https://github.com/Aiinfustructure123/Leadgen#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "@clerk/nextjs": "^7.5.9",
+    "@prisma/client": "^7.8.0",
+    "inngest": "^4.11.0",
+    "jsforce": "^3.10.17",
+    "luxon": "^3.7.2",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "resend": "^6.16.0",
+    "twilio": "^6.0.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/jsforce": "^1.11.6",
+    "@types/luxon": "^3.7.2",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.9",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
