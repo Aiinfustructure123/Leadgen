@@ -89,7 +89,6 @@ export const onMessageReceived = inngest.createFunction(
   { id: "on-message-received" },
   { event: "message/received" },
   async ({ event, step }) => {
-    const leadId = event.data.leadId as string;
     const conversationId = event.data.conversationId as string;
 
     if (!isInsideContactHours()) {

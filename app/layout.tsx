@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 import "@/app/globals.css";
 
@@ -15,13 +16,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className="min-h-screen antialiased">
           <header className="border-b border-stone-200 bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-              <a href="/" className="font-semibold tracking-tight text-slate-950">
+              <Link href="/" className="font-semibold tracking-tight text-slate-950">
                 One Homes AI Concierge
-              </a>
+              </Link>
               <div className="flex items-center gap-4 text-sm">
-                <a href="/dashboard" className="text-slate-700 hover:text-slate-950">
+                <Link href="/dashboard" className="text-slate-700 hover:text-slate-950">
                   Dashboard
-                </a>
+                </Link>
                 <SignedOut>
                   <SignInButton mode="modal">
                     <button className="rounded-full bg-slate-950 px-4 py-2 text-white">Sign in</button>
