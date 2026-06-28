@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  salesforceId  String?    @unique
+  firstName     String?
+  lastName      String?
+  email         String?
+  phone         String? // E.164
+  enquiryType   String? // e.g. "2-bed Marylebone", from SF
+  propertyRef   String?
+  source        String?
+  status        LeadStatus @default(NEW)
+  optedOut      Boolean    @default(false)
+  qualification Json? // budget, beds, location, timeline, buyerType, financing, viewingInterest
+  lastInboundAt DateTime?
+  lastOutboundAt DateTime?
+  conversations Conversation[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([phone])
+  @@index([status])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel   Channel   @default(WHATSAPP)
+  messages  Message[]
+  handoff   Boolean   @default(false) // true once a human takes over
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([leadId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           Role // LEAD | AI | HUMAN | SYSTEM
+  body           String
+  meta           Json? // provider ids, template used, tool calls
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// Properties referenced in enquiries. Source of truth for facts the AI may share.
+model Property {
+  id           String   @id @default(cuid())
+  ref          String   @unique
+  title        String?
+  area         String?
+  price        String?
+  bedrooms     Int?
+  bathrooms    Int?
+  sizeSqft     Int?
+  description  String?
+  status       String? // available, under_offer, let_agreed, sold
+  features     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Idempotency log for inbound webhooks (dedupe by provider event id).
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  source     String // salesforce | twilio
+  externalId String
+  createdAt  DateTime @default(now())
+
+  @@unique([source, externalId])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}
