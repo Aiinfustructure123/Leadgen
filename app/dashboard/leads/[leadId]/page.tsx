@@ -13,6 +13,8 @@ import {
 } from "../../actions";
 import { ConversationPanel } from "./conversation-panel";
 
+export const dynamic = "force-dynamic";
+
 const STATUSES: LeadStatus[] = [
   "NEW",
   "CONTACTED",

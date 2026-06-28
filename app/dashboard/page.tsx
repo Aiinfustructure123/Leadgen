@@ -3,6 +3,8 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const leads = await prisma.lead.findMany({
     orderBy: { lastActivityAt: "desc" },

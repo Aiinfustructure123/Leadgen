@@ -132,7 +132,7 @@ HANDOFF
 
 function mapHistoryToAnthropic(
   messages: Array<{ role: Role; body: string }>,
-): Array<{ role: "user" | "assistant"; content: string }> {
+): Anthropic.MessageParam[] {
   return messages.map((message) => {
     if (message.role === Role.LEAD) {
       return { role: "user", content: message.body };
@@ -260,7 +260,7 @@ export async function runAgentTurn({
     conversation.messages.map((message) => ({ role: message.role, body: message.body })),
   );
 
-  let workingMessages: Array<Record<string, unknown>> = [...transcript];
+  const workingMessages: Anthropic.MessageParam[] = [...transcript];
   let finalReply = "";
   let escalated = false;
   let optedOut = false;
@@ -271,7 +271,7 @@ export async function runAgentTurn({
       model: MODEL_CONFIG.conversationModel,
       max_tokens: 700,
       system: buildSystemPrompt(),
-      messages: workingMessages as Anthropic.MessageParam[],
+      messages: workingMessages,
       tools: TOOL_DEFINITIONS as unknown as Anthropic.Tool[],
     });
 
@@ -288,7 +288,7 @@ export async function runAgentTurn({
 
     workingMessages.push({
       role: "assistant",
-      content: response.content as unknown as string,
+      content: response.content,
     });
 
     for (const toolCall of toolCalls) {
@@ -302,16 +302,18 @@ export async function runAgentTurn({
       optedOut ||= Boolean(executed.optedOut);
       viewingBooked ||= Boolean(executed.viewingBooked);
 
-      workingMessages.push({
-        role: "user",
-        content: [
-          {
-            type: "tool_result",
-            tool_use_id: toolCall.id,
-            content: JSON.stringify(executed.result),
-          },
-        ],
-      });
+      workingMessages.push(
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: toolCall.id,
+              content: JSON.stringify(executed.result),
+            },
+          ],
+        } as unknown as Anthropic.MessageParam,
+      );
     }
   }
 

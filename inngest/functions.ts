@@ -12,8 +12,7 @@ import { syncConversationToSalesforce } from "@/lib/salesforce";
 import { sendFreeform, sendTemplate } from "@/lib/whatsapp";
 
 export const onLeadCreated = inngest.createFunction(
-  { id: "lead-created-fanout", retries: 3 },
-  { event: "lead/created" },
+  { id: "lead-created-fanout", retries: 3, triggers: [{ event: "lead/created" }] },
   async ({ event, step }) => {
     const lead = await step.run("load-lead", () =>
       prisma.lead.findUnique({
@@ -87,8 +86,7 @@ export const onLeadCreated = inngest.createFunction(
 );
 
 export const onMessageReceived = inngest.createFunction(
-  { id: "message-received-agent-loop", retries: 3 },
-  { event: "message/received" },
+  { id: "message-received-agent-loop", retries: 3, triggers: [{ event: "message/received" }] },
   async ({ event, step }) => {
     const payload = await step.run("load-context", async () => {
       const lead = await prisma.lead.findUnique({
@@ -142,7 +140,10 @@ export const onMessageReceived = inngest.createFunction(
       prisma.lead.findUnique({ where: { id: payload.lead!.id } }),
     );
 
-    const canSendFreeform = isWithinCustomerCareWindow(refreshedLead?.lastInboundAt);
+    const lastInboundAt = refreshedLead?.lastInboundAt
+      ? new Date(refreshedLead.lastInboundAt)
+      : undefined;
+    const canSendFreeform = isWithinCustomerCareWindow(lastInboundAt);
     if (canSendFreeform) {
       const sent = await step.run("send-whatsapp-freeform", () =>
         sendFreeform(payload.lead!.phone!, outcome.reply!),
@@ -199,8 +200,7 @@ export const onMessageReceived = inngest.createFunction(
 );
 
 export const syncToSalesforce = inngest.createFunction(
-  { id: "lead-sync-to-salesforce", retries: 3 },
-  { event: "lead/sync.requested" },
+  { id: "lead-sync-to-salesforce", retries: 3, triggers: [{ event: "lead/sync.requested" }] },
   async ({ event, step }) => {
     const lead = await step.run("load-lead-with-conversation", () =>
       prisma.lead.findUnique({

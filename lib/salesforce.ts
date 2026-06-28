@@ -29,7 +29,7 @@ async function connect() {
 export async function syncConversationToSalesforce(payload: SyncPayload) {
   const conn = await connect();
 
-  const updateBody: Record<string, unknown> = {
+  const updateBody: Record<string, unknown> & { Id: string } = {
     Id: payload.salesforceId,
     [SALESFORCE_FIELD_CONFIG.statusField]: payload.status,
     [SALESFORCE_FIELD_CONFIG.qualificationField]: JSON.stringify(payload.qualification ?? {}),
@@ -38,7 +38,7 @@ export async function syncConversationToSalesforce(payload: SyncPayload) {
     [SALESFORCE_FIELD_CONFIG.aiHandledField]: true,
   };
 
-  await conn.sobject("Lead").update(updateBody);
+  await conn.sobject("Lead").update(updateBody as unknown as { Id: string });
 
   await conn.sobject("Task").create({
     WhoId: payload.salesforceId,
@@ -46,5 +46,5 @@ export async function syncConversationToSalesforce(payload: SyncPayload) {
     Status: "Completed",
     Priority: "Normal",
     Description: payload.transcriptSummary,
-  });
+  } as unknown as Record<string, unknown>);
 }
