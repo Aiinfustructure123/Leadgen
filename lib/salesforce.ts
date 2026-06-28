@@ -1,11 +1,24 @@
 import jsforce from "jsforce";
 
 import { getAppBaseUrl, getEnv, optionalEnv, SALESFORCE_FIELDS } from "@/lib/config";
-import type { Lead, Message } from "@/generated/prisma/client";
+
+type LeadForSync = {
+  id: string;
+  salesforceId?: string | null;
+  status: string;
+  optedOut: boolean;
+  qualification?: unknown;
+};
+
+type MessageForSync = {
+  role: string;
+  body: string;
+  createdAt: Date | string;
+};
 
 type ConversationForSync = {
   id: string;
-  messages: Message[];
+  messages: MessageForSync[];
 };
 
 export async function syncConversationToSalesforce({
@@ -13,7 +26,7 @@ export async function syncConversationToSalesforce({
   conversation,
   summary,
 }: {
-  lead: Lead;
+  lead: LeadForSync;
   conversation: ConversationForSync;
   summary: string;
 }) {
@@ -81,10 +94,13 @@ async function getSalesforceConnection() {
   return connection;
 }
 
-function formatTranscript(messages: Message[]): string {
+function formatTranscript(messages: MessageForSync[]): string {
   return messages
     .map((message) => {
-      const timestamp = message.createdAt.toISOString();
+      const timestamp =
+        message.createdAt instanceof Date
+          ? message.createdAt.toISOString()
+          : new Date(message.createdAt).toISOString();
       return `[${timestamp}] ${message.role}: ${message.body}`;
     })
     .join("\n");

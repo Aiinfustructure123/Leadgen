@@ -13,7 +13,22 @@ import { AI_MODELS, getCalendarUrl, getConsultantName, getContactHours, getEnv }
 import { prisma } from "@/lib/db";
 import { markOptedOut, mergeQualification } from "@/lib/leads";
 import { getSalesforcePropertyDetails } from "@/lib/salesforce";
-import type { Conversation, Lead, Message } from "@/generated/prisma/client";
+
+type LeadContext = {
+  id: string;
+  firstName?: string | null;
+  enquiryType?: string | null;
+  propertyRef?: string | null;
+};
+
+type ConversationContext = {
+  id: string;
+};
+
+type MessageContext = {
+  role: "LEAD" | "AI" | "HUMAN" | "SYSTEM";
+  body: string;
+};
 
 const qualificationSchema = z.object({
   fields: z.record(z.string(), z.unknown()),
@@ -47,9 +62,9 @@ export async function runAgentLoop({
   conversation,
   messages,
 }: {
-  lead: Lead;
-  conversation: Conversation;
-  messages: Message[];
+  lead: LeadContext;
+  conversation: ConversationContext;
+  messages: MessageContext[];
 }): Promise<AgentResult> {
   const anthropic = new Anthropic({ apiKey: getEnv("ANTHROPIC_API_KEY") });
   const transcript: MessageParam[] = buildTranscript(messages);
@@ -109,7 +124,7 @@ export async function runAgentLoop({
   };
 }
 
-export async function summarizeConversation(messages: Message[]): Promise<string> {
+export async function summarizeConversation(messages: MessageContext[]): Promise<string> {
   if (messages.length === 0) {
     return "No conversation messages recorded yet.";
   }
@@ -206,8 +221,8 @@ const tools: Tool[] = [
 async function executeTool(
   name: string,
   input: unknown,
-  lead: Lead,
-  conversation: Conversation,
+  lead: LeadContext,
+  conversation: ConversationContext,
 ): Promise<unknown> {
   switch (name) {
     case "get_property_details": {
@@ -282,7 +297,7 @@ async function escalateToHuman(conversationId: string, leadId: string, reason: s
   ]);
 }
 
-function buildTranscript(messages: Message[]): MessageParam[] {
+function buildTranscript(messages: MessageContext[]): MessageParam[] {
   return messages
     .filter((message) => message.role !== "SYSTEM")
     .map((message) => ({
@@ -291,7 +306,7 @@ function buildTranscript(messages: Message[]): MessageParam[] {
     }));
 }
 
-function buildSystemPrompt(lead: Lead): string {
+function buildSystemPrompt(lead: LeadContext): string {
   const consultantName = getConsultantName();
   const leadName = lead.firstName || "there";
 

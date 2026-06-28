@@ -1,9 +1,15 @@
 import { Resend } from "resend";
 
 import { getConsultantName, getEmailFrom, getEnv } from "@/lib/config";
-import type { Lead } from "@/generated/prisma/client";
 
-export async function sendIntro(lead: Lead) {
+type EmailLead = {
+  email?: string | null;
+  firstName?: string | null;
+  enquiryType?: string | null;
+  propertyRef?: string | null;
+};
+
+export async function sendIntro(lead: EmailLead) {
   if (!lead.email) {
     return { skipped: true as const, reason: "Lead has no email address." };
   }
@@ -25,13 +31,13 @@ export async function sendIntro(lead: Lead) {
   return { skipped: false as const, providerMessageId: result.data?.id };
 }
 
-function buildSubject(lead: Lead): string {
+function buildSubject(lead: EmailLead): string {
   return lead.enquiryType
     ? `Your One Homes enquiry: ${lead.enquiryType}`
     : "Your One Homes enquiry";
 }
 
-function buildTextIntro(lead: Lead, consultantName: string): string {
+function buildTextIntro(lead: EmailLead, consultantName: string): string {
   const greeting = lead.firstName ? `Hi ${lead.firstName},` : "Hi,";
   const enquiry = lead.enquiryType
     ? ` about ${lead.enquiryType}`
@@ -52,7 +58,7 @@ ${consultantName}
 One Homes`;
 }
 
-function buildHtmlIntro(lead: Lead, consultantName: string): string {
+function buildHtmlIntro(lead: EmailLead, consultantName: string): string {
   const greeting = lead.firstName ? `Hi ${escapeHtml(lead.firstName)},` : "Hi,";
   const enquiry = lead.enquiryType
     ? ` about <strong>${escapeHtml(lead.enquiryType)}</strong>`

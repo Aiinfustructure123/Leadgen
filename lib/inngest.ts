@@ -113,7 +113,7 @@ export const onMessageReceived = inngest.createFunction(
       return { skipped: true, reason: loaded.handoff ? "Human handoff active." : "Lead opted out." };
     }
 
-    if (!isInsideWhatsAppCareWindow(loaded.lead.lastInboundAt)) {
+    if (!isInsideWhatsAppCareWindow(toDate(loaded.lead.lastInboundAt))) {
       await step.run("record closed WhatsApp window", () =>
         appendMessage({
           conversationId,
@@ -143,7 +143,7 @@ export const onMessageReceived = inngest.createFunction(
           conversationId,
           role: "AI",
           body: agentResult.reply!,
-          meta: { toolCalls: agentResult.toolCalls },
+          meta: toJsonMeta({ toolCalls: agentResult.toolCalls }),
           providerMessageId: result.providerMessageId,
         });
       });
@@ -190,4 +190,16 @@ function buildIntroTemplateCopy(firstName?: string | null, enquiryType?: string 
   const enquiry = enquiryType ? ` about ${enquiryType}` : "";
 
   return `${greeting}, thanks for your enquiry${enquiry}. I am ${getConsultantName()}'s AI assistant at One Homes. I can help with quick questions or arrange a viewing while ${getConsultantName()} is with clients. Reply STOP to opt out. Contact hours: ${getContactHours()}.`;
+}
+
+function toDate(value?: Date | string | null): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date ? value : new Date(value);
+}
+
+function toJsonMeta(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
 }
