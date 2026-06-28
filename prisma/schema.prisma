@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id              String         @id @default(cuid())
+  salesforceId    String?        @unique
+  firstName       String?
+  lastName        String?
+  email           String?
+  phone           String?        @unique
+  enquiryType     String?
+  propertyRef     String?
+  source          String?
+  consentSource   String?
+  status          LeadStatus     @default(NEW)
+  optedOut        Boolean        @default(false)
+  qualification   Json?
+  lastInboundAt   DateTime?
+  lastContactedAt DateTime?
+  conversations   Conversation[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([lastInboundAt])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel   Channel   @default(WHATSAPP)
+  messages  Message[]
+  handoff   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([leadId, channel])
+  @@index([handoff])
+}
+
+model Message {
+  id                String       @id @default(cuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role              Role
+  body              String
+  providerMessageId String?      @unique
+  meta              Json?
+  createdAt         DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([role, createdAt])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}
