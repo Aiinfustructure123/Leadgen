@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id              String       @id @default(cuid())
+  salesforceId    String?      @unique
+  firstName       String?
+  lastName        String?
+  email           String?
+  phone           String? // E.164 format
+  enquiryType     String? // e.g. "2-bed Marylebone"
+  propertyRef     String?
+  source          String?
+  status          LeadStatus   @default(NEW)
+  optedOut        Boolean      @default(false)
+  qualification   Json? // budget, beds, location, timeline, buyerType, financing, viewingInterest
+  lastInboundAt   DateTime?
+  conversations   Conversation[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id])
+  channel   Channel   @default(WHATSAPP)
+  messages  Message[]
+  handoff   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           Role
+  body           String
+  meta           Json? // provider ids, template used, tool calls
+  createdAt      DateTime     @default(now())
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}
