@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id                 String          @id @default(cuid())
+  salesforceId       String?         @unique
+  firstName          String?
+  lastName           String?
+  email              String?
+  phone              String?         @unique
+  enquiryType        String?
+  propertyRef        String?
+  source             String?
+  consentSource      String?
+  status             LeadStatus      @default(NEW)
+  optedOut           Boolean         @default(false)
+  qualification      Json?
+  lastInboundAt      DateTime?
+  lastOutboundAt     DateTime?
+  aiDisclosureSentAt DateTime?
+  manualOverride     Boolean         @default(false)
+  salesforceUrl      String?
+  conversations      Conversation[]
+  queueItems         OutboundQueue[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  leadId        String
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel       Channel   @default(WHATSAPP)
+  messages      Message[]
+  handoff       Boolean   @default(false)
+  handoffReason String?
+  handedOffAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           Role
+  body           String
+  provider       String?
+  providerId     String?
+  meta           Json?
+  createdAt      DateTime     @default(now())
+
+  @@unique([provider, providerId])
+  @@index([conversationId, createdAt])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  ref         String   @unique
+  title       String?
+  location    String?
+  bedrooms    Int?
+  price       Decimal? @db.Decimal(12, 2)
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  externalId  String
+  payloadHash String
+  receivedAt  DateTime @default(now())
+
+  @@unique([provider, externalId])
+}
+
+model OutboundQueue {
+  id          String       @id @default(cuid())
+  leadId      String
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel     Channel
+  messageType OutboundType
+  payload     Json
+  sendAfter   DateTime
+  sentAt      DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  VIEWING_BOOKED
+  HANDED_OFF
+  OPTED_OUT
+  DEAD
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+}
+
+enum Role {
+  LEAD
+  AI
+  HUMAN
+  SYSTEM
+}
+
+enum OutboundType {
+  TEMPLATE
+  FREEFORM
+  EMAIL
+}
