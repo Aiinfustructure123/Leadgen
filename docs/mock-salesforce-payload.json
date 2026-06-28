@@ -1,0 +1,12 @@
+{
+  "eventId": "evt_demo_001",
+  "salesforceId": "00Qdemo00000001",
+  "firstName": "Alex",
+  "lastName": "Taylor",
+  "email": "alex.taylor@example.com",
+  "phone": "+447700900123",
+  "enquiryType": "2-bed Marylebone",
+  "propertyRef": "OH-MARY-2B-301",
+  "source": "Website",
+  "consentSource": "Salesforce enquiry form"
+}
