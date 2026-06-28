@@ -31,12 +31,45 @@ model Lead {
   aiStatus             String?
   viewingBooked        Boolean        @default(false)
   conversations        Conversation[]
+  notes                LeadNote[]
+  followUps            FollowUp[]
   inboundEvents        WebhookEvent[]
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
 
   @@index([status])
   @@index([lastActivityAt])
+}
+
+model LeadNote {
+  id          String   @id @default(cuid())
+  leadId       String
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  body         String
+  author       String   @default("consultant")
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([leadId, createdAt])
+}
+
+model FollowUp {
+  id           String         @id @default(cuid())
+  leadId        String
+  lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title         String
+  notes         String?
+  dueAt         DateTime
+  status        FollowUpStatus @default(PENDING)
+  priority      FollowUpPriority @default(MEDIUM)
+  owner         String         @default("consultant")
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([leadId, dueAt])
+  @@index([status, dueAt])
 }
 
 model Conversation {
@@ -103,4 +136,16 @@ enum Role {
   AI
   HUMAN
   SYSTEM
+}
+
+enum FollowUpStatus {
+  PENDING
+  DONE
+  CANCELLED
+}
+
+enum FollowUpPriority {
+  LOW
+  MEDIUM
+  HIGH
 }

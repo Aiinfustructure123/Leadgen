@@ -1,11 +1,16 @@
-import Link from "next/link";
+import { FollowUpStatus, LeadStatus } from "@prisma/client";
+import { endOfDay, startOfDay } from "date-fns";
 
-import { StatusBadge } from "@/components/status-badge";
+import { DashboardClient } from "@/app/dashboard/dashboard-client";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+
   const leads = await prisma.lead.findMany({
     orderBy: { lastActivityAt: "desc" },
     include: {
@@ -15,66 +20,69 @@ export default async function DashboardPage() {
         },
         take: 1,
       },
+      notes: {
+        select: { id: true },
+      },
+      followUps: {
+        where: {
+          status: FollowUpStatus.PENDING,
+        },
+        select: {
+          dueAt: true,
+          status: true,
+        },
+      },
     },
   });
 
+  const engagedStatuses = new Set<LeadStatus>([
+    LeadStatus.ENGAGED,
+    LeadStatus.QUALIFIED,
+    LeadStatus.VIEWING_BOOKED,
+  ]);
+
+  const totalLeads = leads.length;
+  const engagedLeads = leads.filter((lead) => engagedStatuses.has(lead.status)).length;
+  const viewingBooked = leads.filter((lead) => lead.status === LeadStatus.VIEWING_BOOKED).length;
+
+  const rows = leads.map((lead) => {
+    const latest = lead.conversations[0]?.messages[0];
+    const qualification = (lead.qualification as Record<string, string> | null) ?? {};
+    const dueFollowUps = lead.followUps.filter((followUp) => {
+      return followUp.dueAt >= todayStart && followUp.dueAt <= todayEnd;
+    }).length;
+    const overdueFollowUps = lead.followUps.filter((followUp) => followUp.dueAt < todayStart).length;
+
+    return {
+      id: lead.id,
+      name:
+        [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||
+        lead.phone ||
+        "Unnamed lead",
+      enquiryType: lead.enquiryType ?? "General enquiry",
+      status: lead.status,
+      lastActivityAt: lead.lastActivityAt.toISOString(),
+      latestMessage: latest?.body ?? "No messages yet",
+      qualificationSummary:
+        qualification.budget || qualification.location || qualification.timeline
+          ? `${qualification.budget ?? "Budget n/a"} · ${qualification.location ?? "Area n/a"} · ${
+              qualification.timeline ?? "Timeline n/a"
+            }`
+          : "No qualification captured yet",
+      dueFollowUps,
+      overdueFollowUps,
+      notesCount: lead.notes.length,
+    };
+  });
+
+  const overdueFollowUps = rows.reduce((count, row) => count + row.overdueFollowUps, 0);
+
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Live leads dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Track active conversations and take over instantly when needed.
-      </p>
-
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Lead</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Last activity</th>
-              <th className="px-4 py-3 font-medium">Qualification snapshot</th>
-              <th className="px-4 py-3 font-medium">Latest message</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {leads.map((lead) => {
-              const latest = lead.conversations[0]?.messages[0];
-              const qualification = (lead.qualification as Record<string, string> | null) ?? {};
-              return (
-                <tr key={lead.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/leads/${lead.id}`} className="font-medium text-slate-900 hover:underline">
-                      {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.phone || "Unnamed lead"}
-                    </Link>
-                    <p className="text-xs text-slate-500">{lead.enquiryType ?? "General enquiry"}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={lead.status} />
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {lead.lastActivityAt.toLocaleString("en-GB", { hour12: false })}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">
-                    {qualification.budget || qualification.location || qualification.timeline
-                      ? `${qualification.budget ?? "Budget n/a"} · ${qualification.location ?? "Area n/a"} · ${qualification.timeline ?? "Timeline n/a"}`
-                      : "No qualification captured yet"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {latest?.body ? latest.body.slice(0, 90) : "No messages yet"}
-                  </td>
-                </tr>
-              );
-            })}
-            {leads.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                  No leads yet. Trigger /api/webhooks/salesforce to begin.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DashboardClient
+        leads={rows}
+        stats={{ totalLeads, engagedLeads, viewingBooked, overdueFollowUps }}
+      />
     </main>
   );
 }

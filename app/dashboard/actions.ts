@@ -1,6 +1,6 @@
 "use server";
 
-import { LeadStatus, Role } from "@prisma/client";
+import { FollowUpPriority, FollowUpStatus, LeadStatus, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { BUSINESS_CONFIG } from "@/lib/config";
@@ -106,6 +106,99 @@ export async function sendHumanMessage(formData: FormData) {
   await prisma.lead.update({
     where: { id: leadId },
     data: { status: LeadStatus.HANDED_OFF, lastActivityAt: new Date() },
+  });
+
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function addLeadNote(formData: FormData) {
+  const leadId = String(formData.get("leadId"));
+  const body = String(formData.get("body") ?? "").trim();
+  const pinned = String(formData.get("pinned") ?? "") === "on";
+
+  if (!leadId || !body) {
+    return;
+  }
+
+  await prisma.leadNote.create({
+    data: {
+      leadId,
+      body,
+      pinned,
+      author: "consultant",
+    },
+  });
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { lastActivityAt: new Date() },
+  });
+
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function addFollowUp(formData: FormData) {
+  const leadId = String(formData.get("leadId"));
+  const title = String(formData.get("title") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
+  const priorityRaw = String(formData.get("priority") ?? "MEDIUM");
+
+  if (!leadId || !title || !dueAtRaw) {
+    return;
+  }
+
+  const dueAt = new Date(dueAtRaw);
+  if (Number.isNaN(dueAt.getTime())) {
+    return;
+  }
+
+  const priority = Object.values(FollowUpPriority).includes(priorityRaw as FollowUpPriority)
+    ? (priorityRaw as FollowUpPriority)
+    : FollowUpPriority.MEDIUM;
+
+  await prisma.followUp.create({
+    data: {
+      leadId,
+      title,
+      notes: notes || null,
+      dueAt,
+      priority,
+      owner: "consultant",
+    },
+  });
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { lastActivityAt: new Date() },
+  });
+
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function updateFollowUpStatus(formData: FormData) {
+  const followUpId = String(formData.get("followUpId"));
+  const leadId = String(formData.get("leadId"));
+  const statusRaw = String(formData.get("status"));
+
+  if (!followUpId || !leadId) {
+    return;
+  }
+
+  if (!Object.values(FollowUpStatus).includes(statusRaw as FollowUpStatus)) {
+    return;
+  }
+
+  const status = statusRaw as FollowUpStatus;
+  await prisma.followUp.update({
+    where: { id: followUpId },
+    data: {
+      status,
+      completedAt: status === FollowUpStatus.DONE ? new Date() : null,
+    },
   });
 
   revalidatePath(`/dashboard/leads/${leadId}`);

@@ -114,6 +114,8 @@ lead/sync.requested
   - Manual status override
   - Manual opt-out
   - Send human message
+  - Add consultant notes (pin important context)
+  - Create and track follow-ups with due date + priority + completion status
 
 ## Claude tools implemented
 
