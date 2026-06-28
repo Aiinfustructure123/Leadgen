@@ -1,6 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { config as loadEnv } from "dotenv";
 import { Pool } from "pg";
+
+loadEnv({ path: ".env.local" });
+loadEnv();
 
 declare global {
   var prisma: PrismaClient | undefined;
